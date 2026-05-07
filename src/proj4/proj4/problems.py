@@ -52,7 +52,14 @@ class PlanarProblem(object):
         # Check that x and y are within the extents of the map.
 
         # BEGIN QUESTION 1.2
+        # Invalidate any state whose x coordinate falls outside [x_min, x_max].
+        # self.extents[0, 0] is the lower bound and self.extents[0, 1] is the upper
+        # bound for the x dimension (world/meter units when map_info is set,
+        # or pixel units for plain text maps).
+        valid &= (x >= self.extents[0, 0]) & (x <= self.extents[0, 1])
 
+        # Same bounds check for the y dimension using self.extents[1, :].
+        valid &= (y >= self.extents[1, 0]) & (y <= self.extents[1, 1])
         # END QUESTION 1.2
 
         # The units of the state are meters and radians. We need to convert the
@@ -70,7 +77,15 @@ class PlanarProblem(object):
         # integers. Then, index into self.permissible_region, remembering that
         # the zeroth dimension is the height.
         # BEGIN QUESTION 1.2
+        # After world_to_map, the x and y columns of `states` now hold pixel indices.
+        # Extract pixel column (x) and row (y) only for still-valid states so we
+        # never index out-of-bounds on states that already failed the extents check.
+        xi = states[valid, 0].astype(int)   # column index into the occupancy grid
+        yi = states[valid, 1].astype(int)   # row index (height is the zeroth dimension)
 
+        # permissible_region is shaped (height, width), so index as [row, col] = [yi, xi].
+        # A state is free only if its grid cell is marked permissible (True).
+        valid[valid] &= self.permissible_region[yi, xi]
         # END QUESTION 1.2
 
         # Convert the units back from pixels to meters for the caller
@@ -173,7 +188,24 @@ class R2Problem(PlanarProblem):
             resolution = self.check_resolution
 
         # BEGIN QUESTION 1.3
+        # Euclidean distance between the two R^2 configurations.
+        length = np.linalg.norm(q2 - q1)
 
+        if not interpolate_line or length == 0:
+            # When interpolation is disabled or the two points are identical,
+            # return just the two endpoints — no intermediate states are needed.
+            path = np.array([q1, q2])
+        else:
+            # Number of evenly-spaced waypoints such that consecutive states are
+            # at most `resolution` apart.  Always keep at least 2 points (start/end).
+            num_steps = max(int(np.ceil(length / resolution)), 2)
+
+            # alpha sweeps from 0 (at q1) to 1 (at q2).
+            alphas = np.linspace(0, 1, num_steps)
+
+            # Linear interpolation: x(alpha) = (1 - alpha)*q1 + alpha*q2.
+            # np.outer gives a (num_steps, D) array of scaled q1 / q2 vectors.
+            path = np.outer(1 - alphas, q1) + np.outer(alphas, q2)
         # END QUESTION 1.3
 
         return path, length

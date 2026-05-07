@@ -84,10 +84,18 @@ class Roadmap(object):
         """
         # Hint: call the check_edge_validity method from above.
         # BEGIN QUESTION 1.3
+        # For each candidate edge (u, v, edge_length) call check_edge_validity,
+        # which interpolates states along the straight-line segment via R2Problem.steer
+        # and then verifies every interpolated state is in the permissible region.
+        valid_mask = np.array([
+            self.check_edge_validity(int(u), int(v))
+            for u, v, _ in weighted_edges   # `_` is the pre-computed edge length
+        ])
 
+        # Return only the rows (edges) whose full path is collision-free.
+        # weighted_edges has shape (num_edges, 3); boolean indexing keeps valid rows.
+        return weighted_edges[valid_mask]
         # END QUESTION 1.3
-
-        return weighted_edges
 
     def construct(self):
         """Construct the roadmap.

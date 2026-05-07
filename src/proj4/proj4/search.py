@@ -69,8 +69,20 @@ def astar(rm, start, goal):
             # we'll wait for another possible parent later in the queue.
 
             # BEGIN QUESTION 2.2
-
-
+            # In Lazy A*, edges are NOT collision-checked when the roadmap is built.
+            # We defer the check to the first time we would "use" an edge — i.e.,
+            # when we are about to expand the node reached via that edge.
+            #
+            # Only check when this node has an actual parent (the start node has none).
+            if entry.parent != NULL:
+                # Collision-check the edge connecting the parent to the current node.
+                # check_edge_validity interpolates states along the edge and verifies
+                # each one lies inside the permissible region.
+                if not rm.check_edge_validity(entry.parent, entry.node):
+                    # This edge passes through an obstacle.  Discard the queue entry
+                    # and continue with the next-best entry — there may be another
+                    # collision-free path to this node through a different parent.
+                    continue
             # END QUESTION 2.2
 
         expanded[entry.node] = True

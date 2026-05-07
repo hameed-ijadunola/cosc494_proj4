@@ -58,7 +58,20 @@ def rrt(rm, start, goal, bias=0.05, eta=0.5, max_iter=1000):
         # 2. get the nearest neighbor from the tree
         # 3. connect the new sample to the nearest neighbor with step size eta
         # BEGIN QUESTION 5
+        # 1. Draw a random sample from the configuration space.
+        #    With probability `bias` the goal itself is returned (goal biasing)
+        #    to help steer the tree toward the target.  Otherwise a uniformly
+        #    random collision-free configuration is sampled.  Returns shape (1, D).
+        x_rand = sample(rm, goal_config, bias)
 
+        # 2. Find the nearest vertex already in the RRT tree.
+        #    Returns (vertex_id, vertex_config) where vertex_config has shape (1, D).
+        x_near_id, x_near = tree.GetNearestVertex(x_rand)
+
+        # 3. Extend from x_near TOWARD x_rand by a fixed step size eta.
+        #    extend computes: x_new = x_near + eta * (x_rand - x_near).
+        #    This caps how far the tree grows in a single iteration.
+        x_new = extend(x_near, x_rand, eta)   # shape (1, D)
         # END QUESTION 5
 
         # increase counter by 1
@@ -68,7 +81,27 @@ def rrt(rm, start, goal, bias=0.05, eta=0.5, max_iter=1000):
         # 2. if so, add the sample and edge to the tree
         # 3. finally, check whether the goal has been reached and if so, terminate the search
         # BEGIN QUESTION 5
+        # Only add x_new to the tree if BOTH conditions hold:
+        #   a) x_new itself is a collision-free configuration, AND
+        #   b) the straight-line edge from x_near to x_new is collision-free.
+        #
+        # check_state_validity expects shape (N, D) — pass x_new directly.
+        # check_edge_validity expects 1-D arrays — index [0] to drop the batch dim.
+        if (rm.problem.check_state_validity(x_new).all() and
+                rm.problem.check_edge_validity(x_near[0], x_new[0])):
 
+            # Add the new valid configuration as a vertex and record the
+            # directed edge from x_near to x_new.
+            # Plain RRT does not optimize cost during expansion, so cost = 0.
+            x_new_id = tree.AddVertex(x_new, cost=0)
+            tree.AddEdge(x_near_id, x_new_id)
+
+            # Check whether x_new satisfies the goal criterion (within
+            # goal_thresh distance of the goal configuration).  If so, record
+            # the goal node ID and stop expanding the tree.
+            if rm.problem.goal_criterion(goal_config, x_new).all():
+                x_goal_id = x_new_id
+                break
         # END QUESTION 5
 
     if x_goal_id is None:

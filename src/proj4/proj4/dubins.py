@@ -35,48 +35,65 @@ def path_planning(start, end, curvature, resolution=0.1, interpolate_line=True):
 
     # BEGIN QUESTION 3.1
     # --------------------------------------------------
-    # Step 1:
-    # Convert inputs into NumPy arrays
+    # Step 1: Convert inputs into NumPy float arrays.
     # --------------------------------------------------
+    start = np.array(start, dtype=float)   # [sx, sy, s_theta]
+    end   = np.array(end,   dtype=float)   # [ex, ey, e_theta]
 
     # --------------------------------------------------
-    # Step 2:
-    # Transform the problem so the start state becomes:
+    # Step 2: Transform so that the start state becomes (0, 0, 0).
     #
-    #   (0,0,0)
+    # The Dubins solver (path_planning_from_origin) assumes the start is
+    # always at the origin.  We convert the goal to the start's local frame.
     #
-    # Hint:
-    #   - first translate the goal position
-    #   - then rotate into the local frame
+    # 2a. Translate: express the goal position relative to the start position.
     # --------------------------------------------------
+    p_prime = end[:2] - start[:2]          # shape (2,), global translation vector
+
+    # 2b. Rotate: align with the start orientation so the start's x-axis points
+    #     forward.  utils.rotation_matrix(theta) returns a (2, 2) matrix R(theta).
+    #     Multiplying a row-vector on the left rotates it INTO the local frame:
+    #       v_local = v_global @ R(theta)
+    R = utils.rotation_matrix(start[2])    # (2, 2) rotation by start heading
+    p_local = np.matmul(p_prime, R)        # goal position in start's local frame
+
+    # 2c. The goal heading in the local frame is the difference in headings.
+    local_goal = np.array([p_local[0], p_local[1], end[2] - start[2]])
 
     # --------------------------------------------------
-    # Step 3:
-    # Compute the Dubins path in the local frame
-    # Call func: path_planning_from_origin
+    # Step 3: Compute the Dubins path in the local frame.
+    #   `length` is a *normalized* cost (sum of arc/line angles, dimensionless
+    #   when the turning radius is 1).
     # --------------------------------------------------
-
-    # path, mode, length = path_planning_from_origin(
-    #     end,
-    #     curvature,
-    #     resolution=resolution,
-    #     interpolate_line=interpolate_line,
-    # )
-
-    # --------------------------------------------------
-    # Step 4:
-    # Transform the generated path back into
-    # the global coordinate frame
-    # --------------------------------------------------
+    path, mode, length = path_planning_from_origin(
+        local_goal,
+        curvature,
+        resolution=resolution,
+        interpolate_line=interpolate_line,
+    )
 
     # --------------------------------------------------
-    # Step 5:
-    # Convert normalized Dubins length into
-    # real-world path length
+    # Step 4: Transform the computed path back to the global coordinate frame.
+    #
+    # 4a. Rotate by -start_heading to undo the local frame rotation.
     # --------------------------------------------------
+    R_inv = utils.rotation_matrix(-start[2])   # (2, 2) rotation by -start heading
+    path[:, :2] = np.matmul(path[:, :2], R_inv)
 
-    # # Convert normalized Dubins length to real path length
-    # real_path_length = length * 1 / curvature
+    # 4b. Translate: shift from start-relative position to global position.
+    path[:, :2] += start[:2]
+
+    # 4c. Add the start heading back to every waypoint's heading angle.
+    path[:, 2] += start[2]
+
+    # 4d. Wrap all heading angles into (-pi, pi] to avoid discontinuities.
+    pi_2_pi(path[:, 2])
+
+    # --------------------------------------------------
+    # Step 5: Convert normalized Dubins length to real-world arc length.
+    #   Turning radius = 1/curvature, so real_length = normalized_length / curvature.
+    # --------------------------------------------------
+    real_path_length = length * (1.0 / curvature)
 
     # END QUESTION 3.1
 
