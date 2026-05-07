@@ -10,6 +10,3 @@ paper/data/synthetic
 ._.*
 paper/bak
 pywrapper/watch.sh
-*.pyc
-__pycache__/
-proj4/__pycache__/

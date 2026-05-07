@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+proj4/__pycache__/
+venv/
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
