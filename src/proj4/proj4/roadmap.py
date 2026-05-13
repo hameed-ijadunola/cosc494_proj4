@@ -89,8 +89,8 @@ class Roadmap(object):
         # and then verifies every interpolated state is in the permissible region.
         valid_mask = np.array([
             self.check_edge_validity(int(u), int(v))
-            for u, v, _ in weighted_edges   # `_` is the pre-computed edge length
-        ])
+            for u, v, _ in weighted_edges
+        ], dtype=bool)
 
         # Return only the rows (edges) whose full path is collision-free.
         # weighted_edges has shape (num_edges, 3); boolean indexing keeps valid rows.
