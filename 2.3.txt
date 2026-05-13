@@ -1,0 +1,10 @@
+Lazy: True
+Vertices: 27
+Edges: 60
+Running A*
+Path length: 12.960450156532826
+Planning time: 0.003247976303100586
+Edges evaluated: 14
+Shortcutting A* path
+Shortcut length: 12.591492106547538
+Shortcut time: 0.013092041015625
